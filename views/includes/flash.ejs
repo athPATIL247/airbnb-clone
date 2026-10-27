@@ -1,0 +1,49 @@
+<div class="toast-stack" id="toastStack" aria-live="polite" role="status">
+  <% if (typeof success !== 'undefined' && success && success.length) { %>
+    <div class="il-toast" data-auto>
+      <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+      <span><%= success %></span>
+      <button type="button" aria-label="Close" data-close><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  <% } %>
+  <% if (typeof error !== 'undefined' && error && error.length) { %>
+    <div class="il-toast is-error" data-auto>
+      <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+      <span><%= error %></span>
+      <button type="button" aria-label="Close" data-close><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  <% } %>
+</div>
+<script>
+  (function () {
+    var stack = document.getElementById("toastStack");
+    function remove(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+    function bindAuto(el) {
+      var t;
+      function start() { t = setTimeout(function () { remove(el); }, el.getAttribute("data-auto") === "" ? 6000 : 3500); }
+      function stop() { clearTimeout(t); }
+      el.addEventListener("mouseenter", stop);
+      el.addEventListener("mouseleave", start);
+      start();
+    }
+    stack.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-close]");
+      if (b) remove(b.closest(".il-toast"));
+    });
+    Array.prototype.forEach.call(stack.querySelectorAll("[data-auto]"), bindAuto);
+    window.showToast = function (msg, isError) {
+      while (stack.children.length >= 3) remove(stack.firstElementChild);
+      var t = document.createElement("div");
+      t.className = "il-toast" + (isError ? " is-error" : "");
+      t.setAttribute("data-auto", "1");
+      var ic = document.createElement("i");
+      ic.className = isError ? "fa-solid fa-circle-exclamation" : "fa-solid fa-circle-check";
+      ic.setAttribute("aria-hidden", "true");
+      var s = document.createElement("span");
+      s.textContent = msg;
+      t.append(ic, s);
+      stack.appendChild(t);
+      bindAuto(t);
+    };
+  })();
+</script>

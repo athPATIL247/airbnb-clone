@@ -1,0 +1,28 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<% const inr = n => Number(n).toLocaleString("en-IN"); %>
+<div class="wrap wrap-wide">
+  <h1 class="page-h">Trips</h1>
+  <% if (!trips.length) { %>
+    <div class="empty-state">
+      <h2>No trips yet</h2>
+      <p>When you reserve a stay, it will show up here.</p>
+      <a href="/" class="il-btn il-btn-primary">Explore stays</a>
+    </div>
+  <% } else { %>
+    <div class="listing-grid">
+      <% trips.forEach(t => {
+           const listing = t.listing;
+           if (!listing) return;
+      %>
+        <a href="/listings/<%= listing._id %>" class="l-card">
+          <div class="l-card__img">
+            <img src="<%= coverUrl(listing) %>" alt="<%= listing.title %>" width="400" height="400" loading="lazy">
+          </div>
+          <div class="l-card__title"><%= listing.title %></div>
+          <div class="l-card__sub"><%= t.checkIn.toDateString() %> – <%= t.checkOut.toDateString() %></div>
+          <div class="l-card__price"><b>&#8377;<%= inr(t.total) %></b> total</div>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

@@ -1,0 +1,27 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<% const inr = n => Number(n).toLocaleString("en-IN"); %>
+<div class="wrap wrap-wide">
+  <h1 class="page-h">Wishlists</h1>
+  <% if (!listings.length) { %>
+    <div class="empty-state">
+      <h2>Create your first wishlist</h2>
+      <p>Tap the heart on any stay to save it here.</p>
+      <a href="/" class="il-btn il-btn-primary">Explore stays</a>
+    </div>
+  <% } else { %>
+    <div class="listing-grid">
+      <% listings.forEach(listing => { %>
+        <a href="/listings/<%= listing._id %>" class="l-card">
+          <div class="l-card__img">
+            <img src="<%= listing.cover %>" alt="<%= listing.title %>" width="400" height="400" loading="lazy">
+            <button type="button" class="l-card__heart is-on" data-id="<%= listing._id %>" aria-label="Save to wishlist" aria-pressed="true"><i class="fa-solid fa-heart"></i></button>
+          </div>
+          <div class="l-card__title"><%= [listing.location, listing.country].filter(Boolean).join(", ") %></div>
+          <div class="l-card__sub"><%= listing.title %></div>
+          <div class="l-card__price"><b>&#8377;<%= inr(listing.price) %></b> night</div>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+<script src="/js/home.js"></script>

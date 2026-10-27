@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: airbnb-stays
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    autoDeployTrigger: commit
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: PORT
+        value: 10000
+      - key: SECRET
+        generateValue: true
+      - key: ATLASDB_URL
+        sync: false
+      - key: MAP_TOKEN
+        sync: false
+      - key: CLOUD_NAME
+        sync: false
+      - key: CLOUD_API_KEY
+        sync: false
+      - key: CLOUD_API_SECRET
+        sync: false

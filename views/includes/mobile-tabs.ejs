@@ -1,0 +1,13 @@
+<nav class="app-tabs" aria-label="Primary">
+  <a href="/" class="<%= typeof pageClass !== 'undefined' && pageClass === 'page-home' ? 'is-active' : '' %>">
+    <i class="fa-solid fa-magnifying-glass"></i><span>Explore</span>
+  </a>
+  <a href="<%= (typeof currUser !== 'undefined' && currUser) ? '/wishlists' : '/login' %>">
+    <i class="fa-regular fa-heart"></i><span>Wishlists</span>
+  </a>
+  <% if (typeof currUser !== 'undefined' && currUser) { %>
+    <a href="/trips"><i class="fa-regular fa-user"></i><span>Profile</span></a>
+  <% } else { %>
+    <a href="/login"><i class="fa-regular fa-user"></i><span>Log in</span></a>
+  <% } %>
+</nav>

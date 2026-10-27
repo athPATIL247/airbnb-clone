@@ -1,0 +1,100 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<% const f = typeof form !== "undefined" ? form : {}; %>
+<div class="host-form-page wrap">
+  <h1>Create a new listing</h1>
+  <form action="/listings" method="post" class="needs-validation host-form" novalidate enctype="multipart/form-data" id="listingForm">
+    <section class="form-card">
+      <div class="form-card__head">Basics</div>
+      <div class="form-card__body">
+        <div class="il-field">
+          <label for="title">Title</label>
+          <input id="title" name="listing[title]" maxlength="60" value="<%= f.title || '' %>" placeholder="Enter a catchy title" type="text" class="form-control" required>
+          <div class="char-count" data-for="title" data-max="60">0 / 60</div>
+          <div class="invalid-feedback">Please enter a title</div>
+        </div>
+        <div class="il-field">
+          <label for="description">Description</label>
+          <textarea id="description" name="listing[description]" maxlength="500" class="form-control" required><%= f.description || '' %></textarea>
+          <div class="char-count" data-for="description" data-max="500">0 / 500</div>
+          <div class="invalid-feedback">Please enter a short description</div>
+        </div>
+        <div class="field-row">
+          <div class="il-field">
+            <label for="category">Category</label>
+            <select id="category" name="listing[category]" class="form-control">
+              <% categories.forEach(c => { %><option value="<%= c %>" <%= (f.category || "Trending") === c ? "selected" : "" %>><%= c %></option><% }) %>
+            </select>
+          </div>
+          <div class="il-field">
+            <label for="propertyType">Property type</label>
+            <select id="propertyType" name="listing[propertyType]" class="form-control">
+              <% ["home","apartment","villa","cabin","room"].forEach(t => { %><option value="<%= t %>" <%= (f.propertyType || "home") === t ? "selected" : "" %>><%= t %></option><% }) %>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="form-card">
+      <div class="form-card__head">Location</div>
+      <div class="form-card__body">
+        <div class="field-row">
+          <div class="il-field">
+            <label for="location">Location</label>
+            <input id="location" name="listing[location]" value="<%= f.location || '' %>" class="form-control" required>
+            <div class="invalid-feedback">Location should be valid</div>
+          </div>
+          <div class="il-field">
+            <label for="country">Country</label>
+            <input id="country" name="listing[country]" value="<%= f.country || '' %>" class="form-control" required>
+            <div class="invalid-feedback">Country name should be valid</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="form-card">
+      <div class="form-card__head">Photos</div>
+      <div class="form-card__body">
+        <div class="il-field">
+          <label for="images">Upload up to 5 images</label>
+          <input id="images" name="listing[images]" type="file" class="form-control" accept="image/png,image/jpeg,image/webp" multiple required>
+          <input type="file" name="listing[image]" accept="image/png,image/jpeg,image/webp" hidden>
+          <div class="invalid-feedback">Please add at least one image</div>
+          <div class="img-previews" id="imgPreviews"></div>
+        </div>
+      </div>
+    </section>
+    <section class="form-card">
+      <div class="form-card__head">Details</div>
+      <div class="form-card__body details-grid">
+        <% [["guests","Guests",3],["bedrooms","Bedrooms",1],["beds","Beds",1],["bathrooms","Bathrooms",1]].forEach(([n,l,d]) => { %>
+          <div class="il-field">
+            <label for="<%= n %>"><%= l %></label>
+            <input id="<%= n %>" name="listing[<%= n %>]" type="number" min="0" class="form-control" value="<%= f[n] != null ? f[n] : d %>" required>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+    <section class="form-card">
+      <div class="form-card__head">Amenities</div>
+      <div class="form-card__body amen-checks">
+        <% defaultAmenities.concat(["Pool","Hot tub","Pets allowed","Lift","Ceiling fan"]).filter((v,i,a)=>a.indexOf(v)===i).forEach(a => { %>
+          <label><input type="checkbox" name="listing[amenities]" value="<%= a %>" <%= !(f.amenities) || (Array.isArray(f.amenities) ? f.amenities : [f.amenities]).includes(a) || (!f.amenities && defaultAmenities.includes(a)) ? "checked" : "" %>> <%= a %></label>
+        <% }) %>
+      </div>
+    </section>
+    <section class="form-card">
+      <div class="form-card__head">Price</div>
+      <div class="form-card__body">
+        <div class="il-field">
+          <label for="price">Price per night (&#8377;)</label>
+          <input id="price" name="listing[price]" value="<%= f.price || '' %>" type="number" min="0" class="form-control" required>
+          <div class="invalid-feedback">Price should be valid</div>
+        </div>
+      </div>
+    </section>
+    <div class="form-sticky-bar">
+      <a href="/" class="il-btn il-btn-outline">Cancel</a>
+      <button class="il-btn il-btn-primary">Add listing</button>
+    </div>
+  </form>
+</div>

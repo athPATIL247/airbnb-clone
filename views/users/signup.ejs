@@ -1,0 +1,36 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<div class="form-page narrow">
+  <div class="form-card auth-card">
+    <div class="form-card__head">
+      <a class="modal-x" href="/" aria-label="Close"><i class="fa-solid fa-xmark"></i></a>
+      Sign up
+    </div>
+    <div class="form-card__body">
+      <h1>Welcome to Airbnb</h1>
+      <form action="/signup" method="POST" class="needs-validation float-form" novalidate>
+        <div class="float-stack">
+          <div class="float-field">
+            <input type="text" id="username" name="username" placeholder=" " autocomplete="username" required>
+            <label for="username">Username</label>
+            <div class="invalid-feedback">Please choose a username</div>
+          </div>
+          <div class="float-field">
+            <input type="email" id="email" name="email" placeholder=" " autocomplete="email" required>
+            <label for="email">Email</label>
+            <div class="invalid-feedback">Please enter a valid email</div>
+          </div>
+          <div class="float-field">
+            <input type="password" id="password" name="password" placeholder=" " autocomplete="new-password" required>
+            <label for="password">Password</label>
+            <button type="button" class="eye" data-eye="#password" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>
+            <div class="invalid-feedback">Please choose a password</div>
+          </div>
+        </div>
+        <button type="submit" class="il-btn il-btn-primary il-btn-block" style="padding:14px;margin-top:16px">Sign up</button>
+      </form>
+      <div class="or-row"><span>or</span></div>
+      <p class="legal-line">By continuing you agree to our <a href="/terms" class="u-link">Terms</a> and <a href="/privacy" class="u-link">Privacy Policy</a>.</p>
+      <p style="text-align:center;margin:20px 0 0;font-size:14px" class="muted">Already have an account? <a href="/login" class="u-link">Log in</a></p>
+    </div>
+  </div>
+</div>

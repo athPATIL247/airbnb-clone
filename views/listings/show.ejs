@@ -1,0 +1,600 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<%
+  const reviews = listing.reviews || [];
+  const stats = listing.stats || { count: 0, avg: 0, avgText: "", isFav: false };
+  const count = stats.count;
+  const avgText = stats.avgText;
+  const dist = [5, 4, 3, 2, 1].map(n => reviews.filter(r => Number(r.rating) === n).length);
+  const price = Number(listing.price) || 0;
+  const NIGHTS = 5;
+  const inr = n => Number(n).toLocaleString("en-IN");
+  const photos = listing.photos && listing.photos.length ? listing.photos : ["/images/placeholder.svg"];
+  const gridClass = photos.length >= 5 ? "photo-grid--full" : photos.length === 1 ? "photo-grid--one" : "photo-grid--few";
+  const host = listing.owner ? listing.owner.username : "Host";
+  const placeFull = [listing.location, listing.country].filter(Boolean).join(", ");
+  const isOwner = typeof isOwnerUser !== "undefined" ? isOwnerUser : false;
+  const hue = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  const safeListing = JSON.stringify({
+    title: listing.title, location: listing.location, country: listing.country, geometry: listing.geometry
+  }).replace(/</g, "\\u003c");
+  const pType = listing.propertyType || "home";
+  const g = listing.guests || 3, br = listing.bedrooms || 1, bd = listing.beds || 1, ba = listing.bathrooms || 1;
+  const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+  const amenList = (listing.amenities && listing.amenities.length) ? listing.amenities : defaultAmenities;
+  const hasCO = amenList.includes("Carbon monoxide alarm");
+  const hasSmoke = amenList.includes("Smoke alarm");
+  const cats = [
+    { t: "Cleanliness", i: "fa-spray-can-sparkles" }, { t: "Accuracy", i: "fa-check" },
+    { t: "Check-in", i: "fa-key" }, { t: "Communication", i: "fa-message" },
+    { t: "Location", i: "fa-map" }, { t: "Value", i: "fa-tag" }
+  ];
+  const chipDefs = [
+    { id: "cleanliness", label: "Cleanliness", icon: "fa-spray-can-sparkles", re: /clean|spotless|tidy/i },
+    { id: "location", label: "Location", icon: "fa-location-dot", re: /location|near|walk|beach|view/i },
+    { id: "hospitality", label: "Hospitality", icon: "fa-heart", re: /host|helpful|friendly|responsive|welcom/i },
+    { id: "comfort", label: "Comfort", icon: "fa-couch", re: /comfort|cozy|cosy|bed|quiet|peace/i },
+    { id: "value", label: "Value", icon: "fa-tag", re: /value|price|worth|cheap|affordable/i },
+    { id: "amenities", label: "Amenities", icon: "fa-wifi", re: /pool|wifi|kitchen|parking|ac|tub/i }
+  ];
+  const chips = chipDefs.map(c => ({ ...c, n: reviews.filter(r => c.re.test(r.comment || "")).length })).filter(c => c.n > 0);
+  const nearbyList = typeof nearby !== "undefined" ? nearby : [];
+  const booked = (typeof bookings !== "undefined" ? bookings : []).map(b => ({
+    in: b.checkIn, out: b.checkOut
+  }));
+%>
+<script>
+  const mapToken = "<%= process.env.MAP_TOKEN %>";
+  const listing = <%- safeListing %>;
+</script>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="laurel" viewBox="0 0 48 96">
+    <g fill="currentColor">
+      <path d="M36 92C14 74 6 46 14 4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="28" cy="82" rx="5" ry="11" transform="rotate(-55 28 82)"/>
+      <ellipse cx="17" cy="68" rx="5" ry="11" transform="rotate(-38 17 68)"/>
+      <ellipse cx="11" cy="52" rx="5" ry="11" transform="rotate(-22 11 52)"/>
+      <ellipse cx="9" cy="35" rx="5" ry="11" transform="rotate(-8 9 35)"/>
+      <ellipse cx="11" cy="19" rx="4.5" ry="10" transform="rotate(8 11 19)"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="listing-detail" data-price="<%= price %>" data-place="<%= listing.location %>" data-nights="<%= NIGHTS %>" data-id="<%= listing._id %>" data-max-guests="<%= g %>" data-booked="<%= JSON.stringify(booked) %>">
+
+  <div class="tabbar" id="tabbar" aria-hidden="true">
+    <div class="wrap">
+      <nav class="tabs" aria-label="Page sections">
+        <a href="#photos" data-spy="photos" class="is-active">Photos</a>
+        <a href="#amenities" data-spy="amenities">Amenities</a>
+        <a href="#reviews" data-spy="reviews">Reviews</a>
+        <a href="#location" data-spy="location">Location</a>
+      </nav>
+      <div class="tab-right">
+        <div class="tab-price">
+          <span class="amt" data-role="amt">&#8377;<%= inr(price * NIGHTS) %></span> <span data-role="per">for <%= NIGHTS %> nights</span>
+          <% if (count) { %><small><i class="fa-solid fa-star" style="font-size:11px"></i> <%= avgText %> &middot; <%= count %> review<%= count === 1 ? "" : "s" %></small><% } %>
+        </div>
+        <button type="button" class="il-btn il-btn-primary tab-reserve" data-open-book>Reserve</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="title-row">
+      <h1><%= listing.title %></h1>
+      <div class="title-actions">
+        <button type="button" class="ta-btn" id="shareBtn"><i class="fa-solid fa-arrow-up-from-bracket"></i> Share</button>
+        <button type="button" class="ta-btn<%= saved ? ' is-saved' : '' %>" id="saveBtn" data-id="<%= listing._id %>" aria-pressed="<%= !!saved %>"><i class="fa-<%= saved ? 'solid' : 'regular' %> fa-heart"></i> Save</button>
+      </div>
+    </div>
+
+    <% if (isOwner) { %>
+    <div class="owner-bar">
+      <a href="/listings/<%= listing._id %>/edit" class="il-btn il-btn-outline il-btn-sm">Edit</a>
+      <button type="button" class="il-btn il-btn-outline il-btn-sm" style="color:#c13515;border-color:#c13515" data-bs-toggle="modal" data-bs-target="#deleteListingModal">Delete</button>
+    </div>
+    <% } %>
+
+    <section id="photos" class="photo-grid <%= gridClass %>" aria-label="Photos">
+      <% photos.slice(0, 5).forEach((src, i) => { %>
+        <button type="button" class="tile" data-open-viewer="<%= i %>" aria-label="Open photo <%= i + 1 %>">
+          <img src="<%= src %>" alt="<%= listing.title %> photo <%= i + 1 %>" width="800" height="600" <%= i === 0 ? 'loading="eager"' : 'loading="lazy"' %>>
+        </button>
+      <% }) %>
+      <div class="hero-overlay">
+        <button type="button" class="circle-white" id="heroBack" aria-label="Back"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="hero-right">
+          <button type="button" class="circle-white" id="heroShare" aria-label="Share"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+          <button type="button" class="circle-white<%= saved ? ' is-on' : '' %>" id="heroSave" data-id="<%= listing._id %>" aria-label="Save"><i class="fa-<%= saved ? 'solid' : 'regular' %> fa-heart"></i></button>
+        </div>
+      </div>
+      <% if (photos.length > 1) { %>
+        <button type="button" class="show-photos" data-open-viewer="0"><i class="fa-solid fa-grip"></i> Show all photos</button>
+      <% } %>
+      <span class="photo-count">1 / <%= photos.length %></span>
+    </section>
+
+    <div class="detail-cols">
+      <div class="detail-main">
+        <div class="sec sec-first">
+          <h2>Entire <%= pType %> in <%= placeFull %></h2>
+          <div class="sub"><%= plural(g, "guest") %> &middot; <%= plural(br, "bedroom") %> &middot; <%= plural(bd, "bed") %> &middot; <%= plural(ba, "bathroom") %></div>
+
+          <% if (stats.isFav) { %>
+          <div class="fav-card">
+            <div class="fav-card__badge">
+              <svg aria-hidden="true"><use href="#laurel"/></svg>
+              <span>Guest<br>favourite</span>
+              <svg aria-hidden="true" style="transform:scaleX(-1)"><use href="#laurel"/></svg>
+            </div>
+            <div class="fav-card__text">One of the most loved homes on Airbnb, according to guests</div>
+            <div class="fav-card__stats">
+              <div class="stat"><b><%= avgText %></b><span class="stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span></div>
+              <div class="stat"><b><%= count %></b><small>Review<%= count === 1 ? "" : "s" %></small></div>
+            </div>
+          </div>
+          <% } else if (count) { %>
+          <div class="rating-line"><i class="fa-solid fa-star"></i> <%= avgText %> &middot; <a href="#reviews" class="u-link"><%= count %> review<%= count === 1 ? "" : "s" %></a></div>
+          <% } else { %>
+          <div class="rating-line">No reviews yet</div>
+          <% } %>
+        </div>
+
+        <div class="sec">
+          <div class="host-row">
+            <span class="avatar avatar-56"><%= host.charAt(0).toUpperCase() %></span>
+            <div>
+              <h3>Hosted by <%= host %></h3>
+              <!-- demo content -->
+              <p>2 years hosting</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <div class="highlights">
+            <!-- demo content -->
+            <div class="hl"><i class="fa-solid fa-umbrella-beach"></i><div><b>Outdoor entertainment</b><span>The pool and alfresco dining are great for summer trips.</span></div></div>
+            <div class="hl"><i class="fa-solid fa-fan"></i><div><b>Designed for staying cool</b><span>Beat the heat with the A/C and ceiling fan.</span></div></div>
+            <div class="hl"><i class="fa-solid fa-door-open"></i><div><b>Self check-in</b><span>You can check in with the building staff.</span></div></div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <p class="desc clamp clamp-5" id="desc"><%= listing.description %></p>
+          <button type="button" class="more-btn" data-bs-toggle="modal" data-bs-target="#aboutModal">Show more <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+
+        <div class="sec">
+          <h2>Where you'll sleep</h2>
+          <div class="sleep-row">
+            <% for (let i = 0; i < br; i++) { %>
+              <div class="sleep-card">
+                <div class="im"><img src="<%= photos[Math.min(i, photos.length - 1)] %>" alt="Bedroom <%= i + 1 %>" loading="lazy"<%= photos.length < 2 ? ' style="object-position:center"' : '' %>></div>
+                <b>Bedroom <%= br > 1 ? (i + 1) : "" %></b>
+                <span>1 bed</span>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="sec" id="amenities">
+          <h2>What this place offers</h2>
+          <div class="amen-grid">
+            <% amenList.slice(0, 10).forEach(name => { %>
+              <div class="amen"><i class="fa-solid <%= amenityIcon(name) %>"></i><span><%= name %></span></div>
+            <% }) %>
+            <% if (!hasCO) { %><div class="amen off"><i class="fa-solid fa-triangle-exclamation"></i><span>Carbon monoxide alarm</span></div><% } %>
+            <% if (!hasSmoke) { %><div class="amen off"><i class="fa-solid fa-bell-slash"></i><span>Smoke alarm</span></div><% } %>
+          </div>
+          <button type="button" class="il-btn il-btn-outline" data-bs-toggle="modal" data-bs-target="#amenModal">Show all <%= amenList.length %> amenities</button>
+        </div>
+
+        <div class="sec" id="calendar">
+          <h2 id="calTitle"><%= NIGHTS %> nights in <%= listing.location %></h2>
+          <div class="cal-sub" id="calSub">&nbsp;</div>
+          <div class="cal" id="cal" aria-label="Choose dates"></div>
+          <div class="cal-foot">
+            <span class="kbd" aria-hidden="true"><i class="fa-regular fa-keyboard"></i></span>
+            <button type="button" class="u-link" id="clearDates">Clear dates</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="detail-aside" aria-label="Booking">
+        <!-- demo content -->
+        <div class="promo">
+          <i class="fa-solid fa-tag tag"></i>
+          <div>Get 10% off your next stay.<br><button type="button" class="u-link" style="font-weight:600" data-demo="Terms are not available in this demo">Terms apply</button></div>
+          <button type="button" class="claim" data-demo="Offer claimed (demo)">Claim</button>
+        </div>
+
+        <div class="book-card" id="bookCard">
+          <div class="price-line"><span class="amt" data-role="amt">&#8377;<%= inr(price * NIGHTS) %></span> <span data-role="per">for <%= NIGHTS %> nights</span></div>
+          <div class="book-fields">
+            <div class="book-dates">
+              <button type="button" class="bf" data-goto="#calendar"><span class="lbl">Check-in</span><span class="val" data-role="in">Add date</span></button>
+              <button type="button" class="bf" data-goto="#calendar"><span class="lbl">Checkout</span><span class="val" data-role="out">Add date</span></button>
+            </div>
+            <div class="book-guests" id="guestBox">
+              <button type="button" class="bf" id="guestBtn" aria-expanded="false">
+                <span><span class="lbl">Guests</span><span class="val" id="guestLabel">2 guests</span></span>
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </div>
+            <div class="guest-pop" id="guestPop">
+              <div class="g-row"><div><b>Adults</b><small>Age 13+</small></div><div class="g-step" data-g="adults" data-min="1" data-val="2"><button type="button" data-d="-1" aria-label="Fewer adults">&minus;</button><span>2</span><button type="button" data-d="1" aria-label="More adults">+</button></div></div>
+              <div class="g-row"><div><b>Children</b><small>Ages 2&ndash;12</small></div><div class="g-step" data-g="children" data-min="0" data-val="0"><button type="button" data-d="-1" aria-label="Fewer children">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More children">+</button></div></div>
+              <div class="g-row"><div><b>Infants</b><small>Under 2</small></div><div class="g-step" data-g="infants" data-min="0" data-max="5" data-val="0"><button type="button" data-d="-1" aria-label="Fewer infants">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More infants">+</button></div></div>
+              <div class="g-row"><div><b>Pets</b><small>Service animals welcome</small></div><div class="g-step" data-g="pets" data-min="0" data-max="5" data-val="0"><button type="button" data-d="-1" aria-label="Fewer pets">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More pets">+</button></div></div>
+              <p class="g-note">This place has a maximum of <%= g %> guests, not including infants.</p>
+              <div style="text-align:right;margin-top:8px"><button type="button" class="u-link" id="guestClose">Close</button></div>
+            </div>
+          </div>
+          <div class="free-cancel" id="freeCancel">Free cancellation before <b data-role="cancel">17 October</b></div>
+          <button type="button" class="il-btn il-btn-primary il-btn-block" style="padding:14px" data-open-book>Reserve</button>
+          <p class="no-charge">You won't be charged yet</p>
+        </div>
+        <div class="report"><i class="fa-solid fa-flag"></i><button type="button" data-demo="Thanks, we'll review this listing (demo)">Report this listing</button></div>
+      </aside>
+    </div>
+  </div>
+
+  <section class="sec-full" id="reviews">
+    <div class="wrap">
+      <% if (count === 0) { %>
+        <div class="rev-compact">No reviews yet</div>
+      <% } else if (stats.isFav) { %>
+        <div class="rev-hero">
+          <div class="big">
+            <svg class="laurel" aria-hidden="true"><use href="#laurel"/></svg>
+            <span><%= avgText %></span>
+            <svg class="laurel flip" aria-hidden="true"><use href="#laurel"/></svg>
+          </div>
+          <h3>Guest favourite</h3>
+          <p>This home is a guest favourite based on ratings, reviews and reliability</p>
+        </div>
+      <% } else { %>
+        <div class="rev-compact"><i class="fa-solid fa-star"></i> <%= avgText %> &middot; <%= count %> review<%= count === 1 ? "" : "s" %></div>
+      <% } %>
+
+      <% if (count > 0) { %>
+      <div class="rating-sum">
+        <div class="rs-col">
+          <h4>Overall rating</h4>
+          <div class="bars">
+            <% [5, 4, 3, 2, 1].forEach((n, idx) => { %>
+              <div><span><%= n %></span><i style="--w: <%= Math.round(dist[idx] / count * 100) %>%"></i></div>
+            <% }) %>
+          </div>
+        </div>
+        <!-- demo content: derived -->
+        <% cats.forEach(c => { %>
+          <div class="rs-col rs-score">
+            <h4><%= c.t %></h4>
+            <b><%= avgText %></b>
+            <i class="fa-solid <%= c.i %>"></i>
+          </div>
+        <% }) %>
+      </div>
+      <% if (chips.length) { %>
+        <div class="topic-chips" id="topicChips">
+          <% chips.forEach(c => { %>
+            <button type="button" class="chip" data-chip="<%= c.id %>" aria-pressed="false"><i class="fa-solid <%= c.icon %>"></i> <%= c.label %> · <%= c.n %></button>
+          <% }) %>
+        </div>
+      <% } %>
+      <div class="rev-grid" id="revGrid">
+        <% reviews.forEach((review, idx) => {
+             const uname = review.author ? review.author.username : "Guest";
+             const when = review.createdAt ? new Date(review.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "";
+             const r = Math.max(0, Math.min(5, Number(review.rating) || 0));
+             const topics = chipDefs.filter(c => c.re.test(review.comment || "")).map(c => c.id).join(" ");
+        %>
+          <article class="rev<%= idx >= 6 ? ' is-hidden' : '' %>" data-topics="<%= topics %>">
+            <div class="rev-who">
+              <span class="avatar avatar-40" style="background:hsl(<%= hue(uname) %> 70% 90%);color:hsl(<%= hue(uname) %> 60% 30%)"><%= uname.charAt(0).toUpperCase() %></span>
+              <div><b><%= uname %></b><span>Airbnb guest</span></div>
+            </div>
+            <div class="rev-meta">
+              <span class="st" aria-label="<%= r %> out of 5 stars">
+                <% for (let s = 1; s <= 5; s++) { %><i class="fa-solid fa-star<%= s > r ? ' off' : '' %>"></i><% } %>
+              </span>
+              <% if (when) { %><span>&middot;</span><span><%= when %></span><% } %>
+            </div>
+            <p class="txt clamp clamp-3"><%= review.comment %></p>
+            <button type="button" class="more-btn" data-more="prev" data-class="clamp-3">Show more</button>
+            <% if (currUser && review.author && review.author._id.equals(currUser._id)) { %>
+              <button type="button" class="rev-del" data-bs-toggle="modal" data-bs-target="#deleteReview<%= review._id %>">Delete review</button>
+              <div class="modal fade" id="deleteReview<%= review._id %>" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content il-modal">
+                    <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2>Delete this review?</h2><span></span></div>
+                    <div class="modal-body">
+                      <p>This can’t be undone.</p>
+                      <form action="/listings/<%= listing._id %>/reviews/<%= review._id %>?_method=DELETE" method="post">
+                        <button class="il-btn il-btn-primary">Delete</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% } %>
+          </article>
+        <% }) %>
+      </div>
+      <% if (count > 6) { %>
+        <button type="button" class="il-btn il-btn-outline" data-bs-toggle="modal" data-bs-target="#allReviewsModal" style="margin-top:40px">Show all <%= count %> reviews</button>
+      <% } %>
+      <% } %>
+
+      <% if (currUser && !isOwner && !alreadyReviewed) { %>
+      <div class="rev-card">
+        <h3>Leave a review</h3>
+        <form action="/listings/<%= listing._id %>/reviews" method="post" class="needs-validation" novalidate id="reviewForm">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Rating</label>
+            <fieldset class="starability-slot">
+              <input type="radio" id="no-rate" class="input-no-rate" name="review[rating]" value="" checked disabled aria-label="No rating." />
+              <input type="radio" id="first-rate1" name="review[rating]" value="1" required />
+              <label for="first-rate1" title="Terrible">1 star</label>
+              <input type="radio" id="first-rate2" name="review[rating]" value="2" />
+              <label for="first-rate2" title="Not good">2 stars</label>
+              <input type="radio" id="first-rate3" name="review[rating]" value="3" />
+              <label for="first-rate3" title="Average">3 stars</label>
+              <input type="radio" id="first-rate4" name="review[rating]" value="4" />
+              <label for="first-rate4" title="Very good">4 stars</label>
+              <input type="radio" id="first-rate5" name="review[rating]" value="5" />
+              <label for="first-rate5" title="Amazing">5 stars</label>
+            </fieldset>
+            <div class="invalid-feedback d-block" id="ratingMsg" hidden>Please choose a rating</div>
+          </div>
+          <div class="mb-3">
+            <label for="comment" class="form-label fw-semibold">Comment</label>
+            <textarea name="review[comment]" id="comment" cols="30" rows="5" class="form-control" required></textarea>
+            <div class="invalid-feedback">Please add some comments for review.</div>
+          </div>
+          <button class="il-btn il-btn-outline">Submit review</button>
+        </form>
+      </div>
+      <% } else if (currUser && alreadyReviewed) { %>
+        <p class="reviewed-note">You've reviewed this stay</p>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="sec-full" id="location">
+    <div class="wrap">
+      <h2 style="font-size:22px">Where you&rsquo;ll be</h2>
+      <p style="margin:24px 0 0"><%= placeFull %></p>
+      <div class="map-wrap">
+        <button type="button" class="map-search" id="mapRecenter" aria-label="Center map on this listing" title="Center map on this listing"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i></button>
+        <div id="map"></div>
+        <div class="map-status" id="mapStatus" role="status" aria-live="polite">
+          <span id="mapStatusText">Loading map...</span>
+          <a id="mapFallbackLink" href="#" target="_blank" rel="noopener" hidden>Open in Google Maps</a>
+        </div>
+      </div>
+      <div class="nbh">
+        <h3>Neighbourhood highlights</h3>
+        <!-- demo content -->
+        <p class="desc clamp clamp-3" id="nbh">Located in the heart of <%= listing.location %>, this stay offers easy access to beaches, caf&eacute;s and popular attractions.</p>
+        <button type="button" class="more-btn show" data-bs-toggle="modal" data-bs-target="#nbhModal">Show more <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec-full">
+    <div class="wrap">
+      <h2 style="font-size:22px;margin-bottom:24px">Meet your host</h2>
+      <div class="host-grid">
+        <div>
+          <div class="host-card">
+            <div class="who">
+              <span class="avatar avatar-88"><%= host.charAt(0).toUpperCase() %><span class="badge-ck"><i class="fa-solid fa-check"></i></span></span>
+              <h3><%= host %></h3>
+              <small>Host</small>
+            </div>
+            <div class="host-stats">
+              <div><b><%= hostStats.count %></b><small>Reviews</small></div>
+              <% if (hostStats.count) { %><div><b><%= hostStats.avgText %>&#9733;</b><small>Rating</small></div><% } %>
+              <div><b>2</b><small>Years hosting</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="host-details">
+          <h3>Host details</h3>
+          <!-- demo content -->
+          <p>Response rate: 100%</p>
+          <p>Responds within an hour</p>
+          <button type="button" class="il-btn il-btn-grey" style="margin-top:20px" data-demo="Messaging is not available in this demo">Message host</button>
+          <div class="protect"><i class="fa-solid fa-shield-halved"></i><span>To help protect your payment, always use Airbnb to send money and communicate with hosts.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec-full" style="border-bottom:0">
+    <div class="wrap">
+      <h2 style="font-size:22px;margin-bottom:24px">Things to know</h2>
+      <div class="know">
+        <div>
+          <i class="fa-regular fa-calendar-xmark big"></i>
+          <h3>Cancellation policy</h3>
+          <p>Free cancellation before check-in. Cancel before check-in for a partial refund.</p>
+          <a class="u-link" href="/cancellation">Learn more</a>
+        </div>
+        <div>
+          <i class="fa-solid fa-key big"></i>
+          <h3>House rules</h3>
+          <p>Check-in after 2:00 pm</p><p>Checkout before 11:00 am</p><p><%= g %> guests maximum</p>
+          <a class="u-link" href="/help">Learn more</a>
+        </div>
+        <div>
+          <i class="fa-solid fa-shield-halved big"></i>
+          <h3>Safety &amp; property</h3>
+          <p>Carbon monoxide alarm<%= hasCO ? "" : " not reported" %></p>
+          <p>Smoke alarm<%= hasSmoke ? "" : " not reported" %></p>
+          <p>Exterior security cameras on property</p>
+          <a class="u-link" href="/safety">Learn more</a>
+        </div>
+      </div>
+
+      <% if (nearbyList.length) { %>
+      <div class="nearby" id="nearby">
+        <div class="nearby-head">
+          <h2>More stays nearby</h2>
+          <div class="pager">
+            <span id="nearPageLabel">1 / 2</span>
+            <button type="button" class="circle-nav" id="nearPrev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+            <button type="button" class="circle-nav" id="nearNext" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+        <div class="nearby-track" id="nearTrack">
+          <% nearbyList.forEach(n => { %>
+            <a class="near-card" href="/listings/<%= n._id %>">
+              <img src="<%= n.cover %>" alt="<%= n.title %>" loading="lazy" width="220" height="220">
+              <b><%= n.title %></b>
+              <span>&#8377;<%= inr(n.price) %><% if (n.stats && n.stats.count) { %> · <i class="fa-solid fa-star"></i> <%= n.stats.avg.toFixed(1) %><% } %></span>
+            </a>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </section>
+
+  <div class="mobile-bar">
+    <div class="price-line"><span class="amt" data-role="amt">&#8377;<%= inr(price * NIGHTS) %></span> <span data-role="per">for <%= NIGHTS %> nights</span><small data-role="range"></small></div>
+    <div class="mobile-guests">
+      <button type="button" class="mobile-guest-trigger" id="mobileGuestBtn" aria-expanded="false" aria-controls="mobileGuestPop"><i class="fa-solid fa-user-group" aria-hidden="true"></i><span id="mobileGuestLabel">2 guests</span><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
+      <div class="mobile-guest-pop" id="mobileGuestPop" hidden>
+        <div class="g-row"><div><b>Adults</b><small>Age 13+</small></div><div class="g-step" data-g="adults" data-min="1" data-val="2"><button type="button" data-d="-1" aria-label="Fewer adults">&minus;</button><span>2</span><button type="button" data-d="1" aria-label="More adults">+</button></div></div>
+        <div class="g-row"><div><b>Children</b><small>Ages 2-12</small></div><div class="g-step" data-g="children" data-min="0" data-val="0"><button type="button" data-d="-1" aria-label="Fewer children">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More children">+</button></div></div>
+        <div class="g-row"><div><b>Infants</b><small>Under 2</small></div><div class="g-step" data-g="infants" data-min="0" data-max="5" data-val="0"><button type="button" data-d="-1" aria-label="Fewer infants">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More infants">+</button></div></div>
+        <div class="g-row"><div><b>Pets</b><small>Service animals welcome</small></div><div class="g-step" data-g="pets" data-min="0" data-max="5" data-val="0"><button type="button" data-d="-1" aria-label="Fewer pets">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More pets">+</button></div></div>
+        <p class="g-note">Maximum <%= g %> guests, not including infants.</p>
+      </div>
+    </div>
+    <button type="button" class="il-btn il-btn-primary" data-open-book>Reserve</button>
+  </div>
+</div>
+
+<div class="modal fade" id="photosModal" tabindex="-1" aria-label="All photos">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content photo-viewer">
+      <div class="pv-bar">
+        <button type="button" class="circle-white" data-bs-dismiss="modal" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+        <span id="pvCounter">1 / <%= photos.length %></span>
+        <div>
+          <button type="button" class="ta-btn" id="pvShare">Share</button>
+          <button type="button" class="ta-btn" id="pvSave">Save</button>
+        </div>
+      </div>
+      <div class="pv-body" id="pvBody">
+        <% photos.forEach((src, i) => { %><img src="<%= src %>" alt="<%= listing.title %> photo <%= i + 1 %>" data-idx="<%= i %>"><% }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="amenModal" tabindex="-1" aria-labelledby="amenTitle">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content il-modal">
+      <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2 id="amenTitle">What this place offers</h2><span></span></div>
+      <div class="modal-body">
+        <% amenList.forEach(name => { %>
+          <div class="amen" style="padding:16px 0;border-bottom:1px solid var(--line-soft)"><i class="fa-solid <%= amenityIcon(name) %>"></i><span><%= name %></span></div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="aboutModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:568px">
+    <div class="modal-content il-modal">
+      <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2>About this space</h2><span></span></div>
+      <div class="modal-body"><p class="desc"><%= listing.description %></p></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="nbhModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:568px">
+    <div class="modal-content il-modal">
+      <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2>Neighbourhood highlights</h2><span></span></div>
+      <div class="modal-body"><p class="desc">Located in the heart of <%= listing.location %>, this stay offers easy access to beaches, cafés and popular attractions.</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="allReviewsModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content il-modal">
+      <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2>Reviews</h2><span></span></div>
+      <div class="modal-body rev-modal">
+        <div>
+          <div class="rev-compact"><i class="fa-solid fa-star"></i> <%= avgText || "New" %> · <%= count %></div>
+        </div>
+        <div>
+          <label class="visually-hidden" for="revSort">Sort</label>
+          <select id="revSort" class="form-control" style="height:48px;margin-bottom:16px">
+            <option value="recent">Most recent</option>
+            <option value="high">Highest</option>
+            <option value="low">Lowest</option>
+          </select>
+          <div id="revModalList">
+            <% reviews.forEach(review => {
+                 const uname = review.author ? review.author.username : "Guest";
+            %>
+              <article class="rev" data-rating="<%= review.rating %>" data-date="<%= review.createdAt ? new Date(review.createdAt).getTime() : 0 %>">
+                <b><%= uname %></b>
+                <p class="txt"><%= review.comment %></p>
+              </article>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteListingModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content il-modal">
+      <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2>Delete this listing?</h2><span></span></div>
+      <div class="modal-body">
+        <p>This will remove the listing and its photos.</p>
+        <form action="/listings/<%= listing._id %>?_method=DELETE" method="POST">
+          <button class="il-btn il-btn-primary">Delete listing</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="bookModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content il-modal">
+      <div class="modal-header"><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button><h2>Confirm reservation</h2><span></span></div>
+      <div class="modal-body">
+        <p id="bookBreakdown"></p>
+        <form action="/listings/<%= listing._id %>/book" method="POST" id="bookForm">
+          <input type="hidden" name="checkIn" id="bookIn">
+          <input type="hidden" name="checkOut" id="bookOut">
+          <input type="hidden" name="guests" id="bookGuests">
+          <% if (currUser) { %>
+            <button class="il-btn il-btn-primary il-btn-block">Confirm and book</button>
+          <% } else { %>
+            <a class="il-btn il-btn-primary il-btn-block" href="/login">Log in to book</a>
+          <% } %>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/map.js"></script>
+<script src="/js/show.js"></script>

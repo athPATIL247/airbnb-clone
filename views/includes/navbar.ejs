@@ -1,0 +1,93 @@
+<header class="site-header" id="siteHeader">
+  <div class="site-header__in">
+    <a class="logo" href="/" aria-label="Airbnb home">
+      <img src="/images/logo.png" alt="Airbnb" width="738" height="230">
+    </a>
+
+    <form class="search-pill" id="searchPill" action="/" method="GET" role="search">
+      <div class="sheet-head"><button type="button" class="sheet-close" id="sheetClose" aria-label="Close search"><i class="fa-solid fa-xmark"></i></button><span>Search stays</span></div>
+      <% if (typeof category !== "undefined" && category) { %>
+        <input type="hidden" name="category" value="<%= category %>">
+      <% } %>
+      <div class="seg seg--where" id="segWhere">
+        <i class="fa-solid fa-house-chimney-window" aria-hidden="true"></i>
+        <span class="seg-label">
+          <small id="whereLbl">Where</small>
+          <input type="text" name="search" id="searchInput" placeholder="Anywhere" aria-label="Search destinations" autocomplete="off"
+                 aria-expanded="false" aria-controls="popWhere"
+                 value="<%= (typeof search !== 'undefined' && search) ? search : '' %>">
+        </span>
+      </div>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="seg seg--text" id="segWhen" aria-expanded="false" aria-controls="popWhen">
+        <small>When</small>
+        <span id="whenLabel"><%= (typeof checkin !== 'undefined' && checkin) ? 'Dates' : 'Anytime' %></span>
+      </button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="seg seg--muted" id="segWho" aria-expanded="false" aria-controls="popWho">
+        <small>Who</small>
+        <span id="whoLabel"><%= (typeof guests !== 'undefined' && guests) ? (guests + ' guests') : 'Add guests' %></span>
+      </button>
+      <input type="hidden" name="checkin" id="checkinInput" value="<%= typeof checkin !== 'undefined' ? checkin : '' %>">
+      <input type="hidden" name="checkout" id="checkoutInput" value="<%= typeof checkout !== 'undefined' ? checkout : '' %>">
+      <input type="hidden" name="guests" id="guestsInput" value="<%= typeof guests !== 'undefined' ? guests : '' %>">
+      <button class="search-go" type="submit" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+
+      <div class="search-pop" id="popWhere" hidden>
+        <p class="pop-title">Suggested destinations</p>
+        <ul id="suggestList" class="suggest-list"></ul>
+      </div>
+      <div class="search-pop search-pop--wide" id="popWhen" hidden>
+        <div class="cal" id="headerCal" aria-label="Choose dates"></div>
+        <div class="cal-foot"><button type="button" class="u-link" id="headerClearDates">Clear dates</button></div>
+      </div>
+      <div class="search-pop" id="popWho" hidden>
+        <div class="g-row"><div><b>Adults</b><small>Age 13+</small></div><div class="g-step" data-hg="adults" data-min="1" data-val="1"><button type="button" data-d="-1" aria-label="Fewer adults">&minus;</button><span>1</span><button type="button" data-d="1" aria-label="More adults">+</button></div></div>
+        <div class="g-row"><div><b>Children</b><small>Ages 2–12</small></div><div class="g-step" data-hg="children" data-min="0" data-val="0"><button type="button" data-d="-1" aria-label="Fewer children">&minus;</button><span>0</span><button type="button" data-d="1" aria-label="More children">+</button></div></div>
+      </div>
+    </form>
+
+    <button type="button" class="mobile-search" id="mobileSearchBtn" aria-label="Start your search" aria-controls="searchPill">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <span>Start your search</span>
+    </button>
+
+    <nav class="header-actions" aria-label="Account">
+      <a class="host-link" href="/listings/new">Become a host</a>
+      <button class="circle-btn globe" type="button" aria-label="Choose language and region" data-toast="Language stays English (IN) in this demo"><i class="fa-solid fa-globe"></i></button>
+      <div class="dropdown">
+        <button class="user-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Main menu">
+          <i class="fa-solid fa-bars"></i>
+          <% if (typeof currUser !== "undefined" && currUser) { %>
+            <span class="avatar avatar-32" aria-hidden="true"><%= currUser.username.charAt(0).toUpperCase() %></span>
+          <% } else { %>
+            <span class="avatar avatar-32 avatar-empty" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+          <% } %>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end il-menu">
+          <% if (typeof currUser === 'undefined' || !currUser) { %>
+            <li><a class="dropdown-item" href="/">Explore</a></li>
+            <li><a class="dropdown-item fw" href="/login">Log in</a></li>
+            <li><a class="dropdown-item" href="/signup">Sign up</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/listings/new">Become a host</a></li>
+            <li><a class="dropdown-item" href="/help">Help Centre</a></li>
+          <% } else { %>
+            <li class="dropdown-item-text fw-semibold px-3 py-2"><%= currUser.username %></li>
+            <li><a class="dropdown-item" href="/">Explore</a></li>
+            <li><a class="dropdown-item" href="/wishlists">Wishlists</a></li>
+            <li><a class="dropdown-item" href="/trips">Trips</a></li>
+            <li><a class="dropdown-item" href="/listings/new">Become a host</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form action="/logout" method="POST">
+                <button class="dropdown-item" type="submit">Log out</button>
+              </form>
+            </li>
+          <% } %>
+        </ul>
+      </div>
+    </nav>
+  </div>
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+</header>

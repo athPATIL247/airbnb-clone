@@ -1,0 +1,151 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<%
+  const cats = [
+    ["fa-fire", "Trending"], ["fa-bed", "Rooms"], ["fa-mountain-city", "Iconic cities"],
+    ["fa-umbrella-beach", "Beach"], ["fa-snowman", "Arctic"], ["fa-house", "Cabins"],
+    ["fa-water", "Lakefront"], ["fa-mountain", "Mountains"], ["fa-chess-rook", "Castles"],
+    ["fa-cow", "Farms"], ["fa-person-swimming", "Amazing pools"]
+  ];
+  const inr = n => Number(n).toLocaleString("en-IN");
+  const activeCat = (typeof category !== "undefined" && category) ? category : "Trending";
+  const qs = (extra) => {
+    const p = new URLSearchParams();
+    if (typeof search !== "undefined" && search) p.set("search", search);
+    if (typeof minPrice !== "undefined" && minPrice !== "") p.set("minPrice", minPrice);
+    if (typeof maxPrice !== "undefined" && maxPrice !== "") p.set("maxPrice", maxPrice);
+    Object.entries(extra || {}).forEach(([k, v]) => { if (v) p.set(k, v); else p.delete(k); });
+    const s = p.toString();
+    return s ? "?" + s : "";
+  };
+%>
+<div class="home-sticky" id="homeSticky">
+  <div class="home-top wrap wrap-wide">
+    <div class="cat-wrap">
+      <button type="button" class="cat-arrow" id="catPrev" aria-label="Scroll categories left"><i class="fa-solid fa-chevron-left"></i></button>
+      <div class="cat-fade cat-fade-l" aria-hidden="true"></div>
+      <div class="cat-strip" id="catStrip" role="tablist" aria-label="Categories">
+        <% cats.forEach((c) => {
+             const on = activeCat === c[1] || (c[1] === "Trending" && !category);
+        %>
+          <a href="/<%= qs({ category: c[1] === "Trending" ? "" : c[1] }) %>" class="cat<%= on ? ' is-active' : '' %>" role="tab" aria-selected="<%= on %>">
+            <i class="fa-solid <%= c[0] %>"></i><span><%= c[1] %></span>
+          </a>
+        <% }) %>
+      </div>
+      <div class="cat-fade cat-fade-r" aria-hidden="true"></div>
+      <button type="button" class="cat-arrow" id="catNext" aria-label="Scroll categories right"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+    <div class="home-tools">
+      <button type="button" class="filter-btn" data-bs-toggle="modal" data-bs-target="#filtersModal">
+        <i class="fa-solid fa-sliders"></i> Filters
+      </button>
+      <label class="tax-box" for="taxSwitch">
+        <span>Display total after taxes</span>
+        <span class="switch"><input type="checkbox" id="taxSwitch" role="switch"><span></span></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="wrap wrap-wide">
+  <% if (allListings.length === 0) { %>
+    <div class="empty-state">
+      <% const hasFilters = (search && search.length) || (category && category !== "Trending") || minPrice !== "" || maxPrice !== ""; %>
+      <% if (hasFilters) { %>
+        <h2>No exact matches</h2>
+        <p>Try changing or removing some of your filters.</p>
+        <a href="/" class="il-btn il-btn-outline">Remove all filters</a>
+      <% } else { %>
+        <h2>No stays to show yet</h2>
+        <p>Listings will appear here for everyone — you do not need to log in to browse.</p>
+        <a href="/" class="il-btn il-btn-outline">Refresh</a>
+      <% } %>
+    </div>
+  <% } else { %>
+  <div class="listing-grid">
+    <% for (let listing of allListings) {
+         const stats = listing.stats || { count: 0, avg: 0, isFav: false };
+         const photos = (listing.photos && listing.photos.length) ? listing.photos : [listing.cover];
+         const on = saved && saved.includes(String(listing._id));
+         const hostName = listing.owner ? listing.owner.username : "a Superhost";
+    %>
+      <a href="/listings/<%= listing._id %>" class="l-card" data-photos="<%= photos.join('|') %>">
+        <div class="l-card__img">
+          <img src="<%= listing.cover %>" alt="<%= listing.title %>" width="400" height="400" loading="lazy">
+          <% if (stats.isFav) { %><span class="gf-pill">Guest favourite</span><% } %>
+          <button type="button" class="l-card__heart<%= on ? ' is-on' : '' %>" data-id="<%= listing._id %>" aria-label="Save to wishlist" aria-pressed="<%= on %>">
+            <i class="fa-<%= on ? 'solid' : 'regular' %> fa-heart"></i>
+          </button>
+          <% if (photos.length > 1) { %>
+            <button type="button" class="img-nav prev" aria-label="Previous photo"><i class="fa-solid fa-chevron-left"></i></button>
+            <button type="button" class="img-nav next" aria-label="Next photo"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="img-dots" aria-hidden="true"><% photos.forEach((_, i) => { %><i class="<%= i === 0 ? 'on' : '' %>"></i><% }) %></div>
+          <% } %>
+        </div>
+        <div class="l-card__row">
+          <div class="l-card__title"><%= [listing.location, listing.country].filter(Boolean).join(", ") %></div>
+          <% if (stats.count) { %><div class="l-card__star"><i class="fa-solid fa-star"></i> <%= stats.avg.toFixed(1) %></div><% } %>
+        </div>
+        <div class="l-card__sub"><%= listing.title %></div>
+        <div class="l-card__sub">Hosted by <%= hostName %></div>
+        <div class="l-card__price">
+          <span class="p-base"><b>&#8377;<%= inr(listing.price) %></b> night</span>
+          <span class="p-tax"><b>&#8377;<%= inr(Math.round(Number(listing.price) * 1.18)) %></b> total before taxes</span>
+        </div>
+      </a>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+
+<button type="button" class="show-map-pill" id="showMapBtn" aria-controls="mapSplit" aria-expanded="false"><i class="fa-solid fa-map"></i> Show map</button>
+<div class="map-split" id="mapSplit" hidden>
+  <div class="map-split__list"></div>
+  <div class="map-split__map-wrap">
+    <div id="indexMap" class="map-split__map"></div>
+    <div class="index-map-status" id="indexMapStatus" role="status" aria-live="polite">Loading map...</div>
+  </div>
+</div>
+
+<div class="modal fade" id="filtersModal" tabindex="-1" aria-labelledby="filtersTitle">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content il-modal">
+      <div class="modal-header">
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h2 id="filtersTitle">Filters</h2>
+        <span></span>
+      </div>
+      <form class="modal-body" method="GET" action="/" id="filtersForm">
+        <% if (typeof search !== "undefined" && search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+        <% if (typeof category !== "undefined" && category) { %><input type="hidden" name="category" value="<%= category %>"><% } %>
+        <h3>Price range</h3>
+        <div class="field-row">
+          <div class="il-field">
+            <label for="minPrice">Minimum</label>
+            <input id="minPrice" name="minPrice" type="number" min="0" class="form-control" value="<%= minPrice || '' %>">
+          </div>
+          <div class="il-field">
+            <label for="maxPrice">Maximum</label>
+            <input id="maxPrice" name="maxPrice" type="number" min="0" class="form-control" value="<%= maxPrice || '' %>">
+          </div>
+        </div>
+        <div class="filter-actions">
+          <a href="/" class="u-link">Clear all</a>
+          <button class="il-btn il-btn-primary" id="showPlacesBtn">Show <%= allListings.length %> places</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.__MAP_TOKEN__ = "<%= process.env.MAP_TOKEN || '' %>";
+  window.__LISTING_MARKERS__ = <%- JSON.stringify(allListings.map(l => ({
+    id: String(l._id),
+    title: l.title,
+    price: l.price,
+    coords: l.geometry && l.geometry.coordinates,
+    cover: l.cover
+  }))).replace(/</g, "\\u003c") %>;
+</script>
+<script src="/js/home.js"></script>

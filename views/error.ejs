@@ -1,0 +1,28 @@
+<% layout("/layouts/boilerplate.ejs") %>
+<% const code = typeof statusCode !== "undefined" ? statusCode : 500; %>
+<div class="err-split wrap">
+  <div>
+    <p class="err-kicker">Oops!</p>
+    <% if (code === 404) { %>
+      <h1>We can&rsquo;t seem to find the page you&rsquo;re looking for.</h1>
+    <% } else { %>
+      <h1><%= message %></h1>
+    <% } %>
+    <p class="err-code">Error code: <%= code %></p>
+    <p>Here are some helpful links instead:</p>
+    <ul class="err-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/listings/new">Become a host</a></li>
+      <li><a href="/help">Help Centre</a></li>
+    </ul>
+  </div>
+  <div class="err-art" aria-hidden="true">
+    <svg viewBox="0 0 240 180" width="240" height="180">
+      <rect x="20" y="40" width="200" height="120" rx="16" fill="#f7f7f7" stroke="#ddd"/>
+      <circle cx="80" cy="90" r="18" fill="#ff385c"/>
+      <rect x="112" y="78" width="80" height="10" rx="5" fill="#ddd"/>
+      <rect x="112" y="96" width="56" height="8" rx="4" fill="#ebebeb"/>
+      <text x="70" y="96" fill="#fff" font-size="16" font-family="Figtree,sans-serif" font-weight="700">?</text>
+    </svg>
+  </div>
+</div>
