@@ -2,6 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { firstString, escapeRegex, cleanSearch, searchRegex, toNumber } = require("../utils/query.js");
 const { serializeSession, unserializeSession } = require("../utils/sessionSerialization.js");
+const { deriveSessionEncryptionSecret } = require("../utils/sessionSecrets.js");
 
 test("firstString picks the first array value", () => {
     assert.equal(firstString(["a", "b"]), "a");
@@ -37,4 +38,12 @@ test("session deserialization accepts JSON and object records", () => {
 test("session deserialization treats corrupt records as missing sessions", () => {
     assert.equal(unserializeSession("[object Object]"), null);
     assert.equal(unserializeSession("not-json"), null);
+});
+
+test("derived Mongo session key always meets encryption secret requirements", () => {
+    const key = deriveSessionEncryptionSecret("render-generated-secret");
+    assert.match(key, /[A-Z].*[A-Z]/);
+    assert.match(key, /[a-z].*[a-z]/);
+    assert.match(key, /[0-9].*[0-9]/);
+    assert.match(key, /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?].*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/);
 });

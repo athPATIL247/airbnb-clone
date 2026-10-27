@@ -26,6 +26,7 @@ const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
 const { CATEGORIES, DEFAULT_AMENITIES, amenityIcon } = require("./utils/amenities.js");
 const { serializeSession, unserializeSession } = require("./utils/sessionSerialization.js");
+const { deriveSessionEncryptionSecret } = require("./utils/sessionSecrets.js");
 
 const wrapAsync = require("./utils/wrapAsync.js");
 const listingController = require("./controller/listing.js");
@@ -70,7 +71,7 @@ const sessionOption = {
 if (process.env.NODE_ENV !== "test" && dbUrl) {
     const store = MongoStore.create({
         mongoUrl: dbUrl,
-        crypto: { secret: process.env.SECRET },
+        crypto: { secret: deriveSessionEncryptionSecret(process.env.SECRET) },
         serialize: serializeSession,
         unserialize: unserializeSession,
         touchAfter: 24 * 3600
